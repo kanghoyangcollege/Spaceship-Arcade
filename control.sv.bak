@@ -1,0 +1,176 @@
+module control_logic (
+		input logic clk,
+		input logic reset,
+		input logic collision,
+		input logic [7:0] keycode,
+		output logic [2:0] bullet_num,
+		output logic finish_game
+);
+
+	enum logic [4:0] {WAIT, in_game, first_bullet, second_bullet, third_bullet, bullseye, stall, DONE} curr_state, next_state;
+	
+	logic inhibit, cnt_reset, inhibit_b, cnt_reset_b;
+	logic [3:0] cnt_out;
+	logic [1:0] bullet_cnt;
+	
+	counter cnt (.inhibit(inhibit), .clk(clk), .reset(cnt_reset), .out(cnt_out));
+	bullet_counter b_cnt (.inhibit(inhibit_b), .clk(clk), .reset(cnt_reset), .out(bullet_cnt));
+	
+	always_ff @(posedge clk)
+	begin
+		if(reset)
+			curr_state = WAIT;
+		else
+			curr_state = next_state;
+	end
+
+	always_comb
+	begin
+		next_state = curr_state;
+		
+		inhibit = 1'b1;
+		cnt_reset = 1'b0;
+		inhibit_b = 1'b1;
+		cnt_reset_b = 1'b0;
+		bullet_num = 3'b000;
+		finish_game = 1'b0;
+
+		unique case(curr_state)
+			WAIT:
+				if(keycode == 8'd40)
+					next_state = in_game;
+			in_game:
+				if(keycode == 8'd44)
+					next_state = first_bullet;
+			first_bullet:
+			begin
+				if(keycode == 8'd44)
+					next_state = second_bullet;
+				if(collision)
+					next_state = bullseye;
+			end
+			second_bullet:
+			begin	
+				if(keycode == 8'd44)
+					next_state = third_bullet;
+				if(collision)
+					next_state = bullseye;
+			end
+			third_bullet:
+			begin
+				if(keycode == 8'd44)
+					begin
+					//bullet_num &= 3'b000;
+					next_state = stall;
+					end
+				if(collision)
+					next_state = bullseye;
+			end
+			stall:
+				next_state = first_bullet;
+			bullseye:
+				if(cnt_out[3] & ~cnt_out[2] & cnt_out[1] & ~cnt_out[0])
+					next_state = DONE;
+			DONE:
+				next_state = WAIT;
+		endcase
+		
+		case(curr_state)
+			WAIT:
+				begin
+					cnt_reset = 1'b1;
+					cnt_reset_b = 1'b1;
+				end
+			in_game:
+				begin
+					cnt_reset_b = 1'b1;
+				end
+			first_bullet:
+				begin
+					inhibit_b = 1'b0;
+					bullet_num = 3'b001;
+				end
+			second_bullet:
+				begin
+					inhibit_b = 1'b0;
+					bullet_num += 3'b010;
+				end
+			third_bullet:
+				begin
+					inhibit_b = 1'b0;
+					bullet_num += 3'b100;
+				end
+			stall:
+				begin
+				    bullet_num &= 3'b000;
+					cnt_reset_b = 1'b1;
+				end
+			bullseye:
+				begin
+					inhibit = 1'b0;
+				end
+			DONE:
+				begin
+					finish_game = 1'b1;
+				end
+		endcase
+	end
+endmodule
+	
+module counter(input  logic  inhibit,  
+					input  logic  clk,  			// clock input
+					input  logic  reset,
+					output logic  [3:0] out); // Output of the counter
+	
+	logic[3:0] tmp_cnt;
+	
+	always_ff @(posedge clk) begin
+			out <= tmp_cnt;                         //Seperate logic to reduce ambiguity
+		end
+		
+	always_comb begin
+		tmp_cnt = out;
+		if(reset) 
+			begin
+				tmp_cnt = 4'b0;                     //Reset counter
+			end
+		else if(inhibit) 
+			begin
+				tmp_cnt = tmp_cnt + 4'b0;           //Do not do anything during an inhibit bit
+			end
+		else
+			begin
+				tmp_cnt = tmp_cnt + 4'b0001;        //Else increment the counter
+			end
+	end
+	
+endmodule
+
+module bullet_counter(input  logic  inhibit,  
+					input  logic  clk,  			// clock input
+					input  logic  reset,
+					output logic  [1:0] out); // Output of the counter
+	
+	logic[3:0] tmp_cnt;
+	
+	always_ff @(posedge clk) begin
+			out <= tmp_cnt;                         //Seperate logic to reduce ambiguity
+		end
+		
+	always_comb begin
+		tmp_cnt = out;
+		if(reset) 
+			begin
+				tmp_cnt = 2'b0;                     //Reset counter
+			end
+		else if(inhibit) 
+			begin
+				tmp_cnt = tmp_cnt + 2'b0;           //Do not do anything during an inhibit bit
+			end
+		else
+			begin
+				tmp_cnt = tmp_cnt + 2'b01;        //Else increment the counter
+			end
+	end
+	
+endmodule

@@ -1,0 +1,43 @@
+Space ship games:
+memory restriction:
+1. SoC: ~3MB
+2. Avalon register: 32 bit x 16  = 512 bit total.
+
+object:
+1. player plane ( 20 wide x 24 high or 480 pixels)
+2. npc plane
+3. player bullet
+4. npc bullet
+
+backgournd:
+1. Scrolling, 640 wide x 480 high(307,200 pixels, 307.2 KB(if 1 byte of data per pixel) or 921.6KB(if 3 byte of data per pixel)) 
+
+controls:
+1. keyboard(arrow keys or wasd keys) controls the direction of the player plane.
+2. button set to shoot.
+
+Interaction:
+1. when player bullet touches npc plane, disappear.
+2. when npc bullet touches player plane, disappear, game over.
+
+Game state FSM:
+1. Game Initial: welcome screen, press any key to start game to enter next state.
+2. Game start: actual game play.
+3. Game done: either success or fail. and go to exit to Initial or restart to game start.
+
+detail for Game start state:
+1. game state for each object.
+2. score keeping
+
+
+Data need to be keep track:
+1. location of player plane.(10 bit x direction and 9 bit y direction)
+2. location of npc plane. ( 10 bit x direction and 9 bit y direction)
+3. player bullet. ( 10 bit and 9 bit) for each bullet.
+    - problem could be too much bullet to keep track of,
+        ` set limit on max bullets, or laser so have a vertical line instead of individual bullet.
+4. npc bullet. ( 10 bit and 9 bit) for each bullet - might not do this due to memory constraint.
+
+
+
+

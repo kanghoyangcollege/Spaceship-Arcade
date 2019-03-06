@@ -1,0 +1,101 @@
+//-------------------------------------------------------------------------
+//    Color_Mapper.sv                                                    --
+//    Stephen Kempf                                                      --
+//    3-1-06                                                             --
+//                                                                       --
+//    Modified by David Kesler  07-16-2008                               --
+//    Translated by Joe Meng    07-07-2013                               --
+//    Modified by Po-Han Huang  10-06-2017                               --
+//                                                                       --
+//    Fall 2017 Distribution                                             --
+//                                                                       --
+//    For use with ECE 385 Lab 8                                         --
+//    University of Illinois ECE Department                              --
+//-------------------------------------------------------------------------
+
+// color_mapper: Decide which color to be output to VGA for each pixel.
+module  color_mapper ( input  [2:0]            is_ball,            // Whether current pixel belongs to ball 
+                       input  clk,                            //   or background (computed in ball.sv)
+                       input  logic  [26:0] mem_addr,
+							  input        [9:0] DrawX, DrawY,       // Current pixel coordinates
+							  input  logic [7:0] keycode,
+                       output logic [7:0] VGA_R, VGA_G, VGA_B // VGA RGB output
+                     );
+    
+    logic [7:0] Red, Green, Blue;
+    logic [7:0] r,g,b;
+    // Output colors to VGA
+    assign VGA_R = Red;
+    assign VGA_G = Green;
+    assign VGA_B = Blue;
+	 
+	 logic [7:0] photo_to_palette;
+	 
+	 logic [23:0] mem [0:479];
+    initial begin 
+        $readmemh("space.txt", mem);
+    end
+	 
+	 logic [7:0] background [0:5699];
+	 initial begin
+			$readmemh("hola.mem", background);
+	 end
+	 
+	 logic [11:0] meme [0:63];
+	 initial begin
+		  $readmemh("hola_palette.mem",meme);
+	 end
+
+    //ram ram0(.dataout({r, g, b}), .read_addr(mem_addr), .re(1'b1), .clk(clk) );
+    // Assign color based on is_ball signal
+    always_comb
+    begin
+		  /*Red = 8'h3f; 
+        Green = 8'h00;
+        Blue = 8'h7f - {1'b0, DrawX[9:3]};*/
+		  photo_to_palette = background[DrawX+DrawY*100];
+		  
+		  Red = {meme[photo_to_palette][11:8], meme[photo_to_palette][11:8]};
+		  Green = {meme[photo_to_palette][7:4], meme[photo_to_palette][7:4]};
+		  Blue = {meme[photo_to_palette][3:0], meme[photo_to_palette][3:0]};
+		  
+        if (is_ball[0] == 1'b1) 
+        begin
+            // White ball
+				if(mem [mem_addr[8:0]] != 24'hffffff)
+				begin
+            Red = mem [mem_addr[8:0]][7:0] ;//8'hff;
+            Green = mem [mem_addr[8:0]][15:8] ;//8'hff;
+            Blue = mem [mem_addr[8:0]][23:16];//8'hff;
+				end
+        end
+		  
+		  if (is_ball[1] == 1'b1)
+		  begin
+				if(mem [mem_addr[17:9]] != 24'hffffff)
+				begin
+				Red = mem [mem_addr[17:9]][7:0] ;//8'hff;
+            Green = mem [mem_addr[17:9]][15:8] ;//8'hff;
+            Blue = mem [mem_addr[17:9]][23:16];//8'hff;
+				end
+		  end
+		  
+		  if (is_ball[2] == 1'b1)
+		  begin
+				if(mem [mem_addr[26:18]] != 24'hffffff)
+				begin
+				Red = mem [mem_addr[26:18]][7:0] ;//8'hff;
+            Green = mem [mem_addr[26:18]][15:8] ;//8'hff;
+            Blue = mem [mem_addr[26:18]][23:16];//8'hff;
+				end
+		  end
+        /*else 
+        begin
+            // Background with nice color gradient
+            Red = 8'h3f; 
+            Green = 8'h00;
+            Blue = 8'h7f - {1'b0, DrawX[9:3]};
+        end*/
+    end 
+    
+endmodule
